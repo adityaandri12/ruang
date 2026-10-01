@@ -29,8 +29,8 @@ export const GAME_TV: Vec3 = [14.2, 0, -5.05]
 export const BEANBAGS: Vec3[] = [[13.7, 0, -4.35], [14.7, 0, -4.35]]
 export const CARROM: Vec3 = [10.6, 0, -0.1]
 
-/** Each agent's own desk (seat 1..3) along the back of the workspace. */
-export const DESKS: Vec3[] = [[-7.2, 0, -3.5], [-4.6, 0, -3.5], [-2, 0, -3.5]]
+/** Each agent's own desk (seat 1..5) along the back of the workspace. */
+export const DESKS: Vec3[] = [[-7.2, 0, -3.5], [-4.6, 0, -3.5], [-2, 0, -3.5], [0.6, 0, -3.5], [3.2, 0, -3.5]]
 /** Unassigned desks that make the workspace feel like an office. */
 export const SPARE_DESKS: Vec3[] = [[-5.9, 0, -1], [-3.3, 0, -1]]
 /** Walkway in front of the desks; agents walk along it between areas instead of through furniture. */
@@ -40,8 +40,8 @@ export const MEETING_SEATS: Vec3[] = [[-6.6, 0, 2.2], [-3.8, 0, 2.2], [-5.2, 0, 
 /** The TV hangs on the back wall; the sofa faces it (backrest towards the aisle). */
 export const TV: Vec3 = [4.6, 0, -4.8]
 export const SOFA: Vec3 = [4.6, 0, -1.3]
-export const LOUNGE_SEATS: Vec3[] = [[4, 0, -1.8], [2.5, 0, -2.9], [6.7, 0, -2.9]]
-const LOUNGE_FACING = [Math.PI, Math.PI / 2, -Math.PI / 2]
+export const LOUNGE_SEATS: Vec3[] = [[4, 0, -1.8], [2.5, 0, -2.9], [6.7, 0, -2.9], [5.5, 0, -0.5], [7.8, 0, -1.2]]
+const LOUNGE_FACING = [Math.PI, Math.PI / 2, -Math.PI / 2, Math.PI, -Math.PI / 2]
 export const COFFEE_TABLE: Vec3 = [4.6, 0, -2.9]
 /** Gap in the low front wall, and the walking line along the sidewalk just outside it. */
 export const ENTRANCE_X = 5.8
@@ -65,6 +65,8 @@ export const PAN_BOUNDS = { minX: -13, maxX: 17, minZ: -7, maxZ: 11 }
 export const PALETTE: Record<string, { hair: string; shirt: string; pants: string }> = {
   'lead-agent': { hair: '#b54b45', shirt: '#e6b34e', pants: '#36475d' },
   'lead-engineer': { hair: '#1d293c', shirt: '#70bdcb', pants: '#374052' },
+  'lab-assistant': { hair: '#2d5a27', shirt: '#4caf50', pants: '#2e4037' },
+  'personal-assistant': { hair: '#4a3d2e', shirt: '#ff9800', pants: '#5d4e37' },
   opencode: { hair: '#6a4d8d', shirt: '#93ca67', pants: '#344349' },
 }
 export const SKIN = '#e9b57d'
@@ -73,7 +75,7 @@ export interface Placement { position: Vec3; facing: number; seated: boolean; la
 
 /** Where a station stands in the 3D office, from the same fields the 2D view uses. */
 export function placementFor(station: OfficeStation): Placement {
-  const seat = Math.min(Math.max(station.seat, 1), 3) - 1
+  const seat = Math.min(Math.max(station.seat, 1), 5) - 1
   if (station.room === 'Lounge') {
     const [x, y, z] = LOUNGE_SEATS[seat]
     return { position: [x, y, z], facing: LOUNGE_FACING[seat], seated: true }
@@ -148,14 +150,14 @@ function stallSpot(stall: Vec3, x: number, z: number, facing: number, seated = f
  */
 export const IDLE_STOPS: IdleStop[] = [
   { key: 'lounge', label: 'Relaxing in the lounge', spots: LOUNGE_SEATS.map(([x, , z], index) => spot(x, z, LOUNGE_FACING[index], true)) },
-  { key: 'galon', label: 'Getting water from the galon', spots: [spot(8.35, -0.4, Math.PI / 2), spot(8.2, -1.05, 2.2), spot(8.2, 0.3, 1.1)] },
+  { key: 'galon', label: 'Getting water from the galon', spots: [spot(8.35, -0.4, Math.PI / 2), spot(8.2, -1.05, 2.2), spot(8.2, 0.3, 1.1), spot(8.4, 1.2, 1.8), spot(8.3, -1.8, 2.5)] },
   // On the gerobak's plastic stools, facing the cart.
-  { key: 'bakso', label: 'Eating bakso', spots: [stallSpot(BAKSO_CART, 0.5, 1.1, Math.PI, true), stallSpot(BAKSO_CART, -0.3, 1.2, Math.PI, true), stallSpot(BAKSO_CART, 1.3, 0.9, -2.4)] },
-  { key: 'dapur', label: 'In the kitchen', spots: [spot(8.25, 2.6, Math.PI / 2), spot(8.3, 0.65, Math.PI / 2), spot(8.25, 3.3, Math.PI / 2)] },
-  { key: 'kopi', label: 'Coffee at the kopi bike', spots: [stallSpot(KOPI_BIKE, -0.5, 0.85, Math.PI), stallSpot(KOPI_BIKE, 0.5, 0.85, Math.PI), stallSpot(KOPI_BIKE, 1.45, 0.3, -Math.PI / 2)] },
-  { key: 'game', label: 'Playing ping-pong', spots: [spot(PING_PONG[0] - 1.75, PING_PONG[2], Math.PI / 2), spot(PING_PONG[0] + 1.75, PING_PONG[2], -Math.PI / 2), spot(BEANBAGS[0][0], BEANBAGS[0][2], Math.PI, true, 'Gaming on the console')] },
-  { key: 'arcade', label: 'Playing arcade games', spots: [spot(ARCADES[0][0], ARCADES[0][2] + 0.8, Math.PI), spot(ARCADES[1][0], ARCADES[1][2] + 0.8, Math.PI), spot(BEANBAGS[1][0], BEANBAGS[1][2], Math.PI, true, 'Gaming on the console')] },
-  { key: 'jalan', label: 'Taking a stroll', spots: [spot(FLAG[0] - 0.8, FLAG[2] + 0.3, Math.PI / 2), spot(BUILDING.minX + 0.95, -0.9, -Math.PI / 2), spot(1.3, -4.4, Math.PI)] },
+  { key: 'bakso', label: 'Eating bakso', spots: [stallSpot(BAKSO_CART, 0.5, 1.1, Math.PI, true), stallSpot(BAKSO_CART, -0.3, 1.2, Math.PI, true), stallSpot(BAKSO_CART, 1.3, 0.9, -2.4), stallSpot(BAKSO_CART, -1.1, 1.0, Math.PI, true), stallSpot(BAKSO_CART, 0.5, 0.3, Math.PI)] },
+  { key: 'dapur', label: 'In the kitchen', spots: [spot(8.25, 2.6, Math.PI / 2), spot(8.3, 0.65, Math.PI / 2), spot(8.25, 3.3, Math.PI / 2), spot(8.3, 1.8, Math.PI / 2), spot(7.8, 2.2, Math.PI / 4)] },
+  { key: 'kopi', label: 'Coffee at the kopi bike', spots: [stallSpot(KOPI_BIKE, -0.5, 0.85, Math.PI), stallSpot(KOPI_BIKE, 0.5, 0.85, Math.PI), stallSpot(KOPI_BIKE, 1.45, 0.3, -Math.PI / 2), stallSpot(KOPI_BIKE, -1.3, 0.7, Math.PI), stallSpot(KOPI_BIKE, 0, 0.2, Math.PI)] },
+  { key: 'game', label: 'Playing ping-pong', spots: [spot(PING_PONG[0] - 1.75, PING_PONG[2], Math.PI / 2), spot(PING_PONG[0] + 1.75, PING_PONG[2], -Math.PI / 2), spot(BEANBAGS[0][0], BEANBAGS[0][2], Math.PI, true, 'Gaming on the console'), spot(BEANBAGS[1][0], BEANBAGS[1][2], Math.PI, true, 'Gaming on the console'), spot(CARROM[0] - 0.9, CARROM[2], Math.PI / 2)] },
+  { key: 'arcade', label: 'Playing arcade games', spots: [spot(ARCADES[0][0], ARCADES[0][2] + 0.8, Math.PI), spot(ARCADES[1][0], ARCADES[1][2] + 0.8, Math.PI), spot(BEANBAGS[1][0], BEANBAGS[1][2], Math.PI, true, 'Gaming on the console'), spot(ARCADES[0][0] - 0.6, ARCADES[0][2] + 0.6, 2.5), spot(ARCADES[1][0] + 0.6, ARCADES[1][2] + 0.6, 0.6)] },
+  { key: 'jalan', label: 'Taking a stroll', spots: [spot(FLAG[0] - 0.8, FLAG[2] + 0.3, Math.PI / 2), spot(BUILDING.minX + 0.95, -0.9, -Math.PI / 2), spot(1.3, -4.4, Math.PI), spot(BUILDING.maxX - 1.2, 3.8, -Math.PI / 4), spot(-8.5, 2.5, 0)] },
 ]
 /** How long an idle agent stays at one stop (walking included). */
 export const IDLE_STOP_MS = 32_000
@@ -167,7 +169,7 @@ export const IDLE_ROUTE = ['lounge', 'galon', 'game', 'bakso', 'jalan', 'arcade'
  * the route so the crew spreads out.
  */
 export function idleStop(seat: number, time: number): { stop: IdleStop; placement: Placement } {
-  const index = Math.min(Math.max(seat, 1), 3) - 1
+  const index = Math.min(Math.max(seat, 1), 5) - 1
   const step = Math.floor(time / IDLE_STOP_MS) + index * 3
   const stop = IDLE_STOPS.find((item) => item.key === IDLE_ROUTE[step % IDLE_ROUTE.length]) ?? IDLE_STOPS[0]
   return { stop, placement: stop.spots[index] }

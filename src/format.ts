@@ -44,7 +44,7 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-const AGENT_LABELS: Record<string, string> = { default: 'Lead Agent', leadengineer: 'Lead Engineer', opencode: 'OpenCode' }
+const AGENT_LABELS: Record<string, string> = { default: 'Lead Agent', 'lead-engineer': 'Lead Engineer', leadengineer: 'Lead Engineer', 'lab-assistant': 'Lab Assistant', 'personal-assistant': 'Personal Asst', opencode: 'OpenCode' }
 
 /** Display name for a Hermes profile: the declared crew names, otherwise the profile itself. */
 export function agentLabel(profile: string | undefined): string {

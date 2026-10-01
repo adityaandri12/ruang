@@ -56,7 +56,7 @@ function officeStateLabel(station: OfficeStation): string {
 }
 
 /** The Hermes profile (folder and memory owner) behind each station's avatar. */
-const PROFILE_BY_AVATAR: Record<string, string> = { 'lead-agent': 'default', 'lead-engineer': 'leadengineer', opencode: 'opencode' }
+const PROFILE_BY_AVATAR: Record<string, string> = { 'lead-agent': 'default', 'lead-engineer': 'lead-engineer', leadengineer: 'lead-engineer', 'lab-assistant': 'lab-assistant', 'personal-assistant': 'personal-assistant', opencode: 'opencode' }
 type DetailTab = 'Overview' | 'Folder' | 'Memory'
 const DETAIL_TABS: DetailTab[] = ['Overview', 'Folder', 'Memory']
 

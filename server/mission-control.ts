@@ -4,7 +4,7 @@ import { promisify } from 'node:util'
 const execFile = promisify(execFileCallback)
 const CACHE_MS = 10_000
 const INSIGHTS_CACHE_MS = 60_000
-const COMMAND_TIMEOUT_MS = 8_000
+const COMMAND_TIMEOUT_MS = 25_000
 const COMMAND_LOG_LIMIT = 100
 const LOG_TAIL_LINES = 200
 
@@ -38,7 +38,7 @@ export interface ChannelSnapshot { channels: Source<Channel[]>; activeSessions?:
 export type OfficeState = 'Idle' | 'Working' | 'Reviewing' | 'Collaborating' | 'Offline' | 'Unknown'
 export type OfficeRoom = 'Workspace' | 'Lounge'
 export interface OfficeStation {
-  name: 'Lead Agent' | 'Lead Engineer' | 'OpenCode'
+  name: (typeof officeMetadata)[number]['name']
   role: string
   avatar: string
   workstation: string
@@ -470,7 +470,7 @@ async function read<T>(run: Run, file: string, args: string[], parse: (output: s
 export async function collectSnapshot(run: Run = systemRun): Promise<RuntimeSnapshot> {
   const [profileData, leadEngineerGateway, openCode] = await Promise.all([
     read(run, 'hermes', ['profile', 'list'], (output) => ({ profiles: parseProfiles(output), gateway: parseDefaultProfileGateway(output) }), { profiles: [], gateway: 'Unknown' as GatewayState }),
-    read(run, 'hermes', ['-p', 'leadengineer', 'gateway', 'status'], parseGatewayStatus, 'Unknown'),
+    read(run, 'hermes', ['-p', 'lead-engineer', 'gateway', 'status'], parseGatewayStatus, 'Unknown'),
     read(run, 'opencode', ['--version'], (value) => value.trim().split('\n').pop()?.trim() || 'Unknown', 'Unknown'),
   ])
   const profiles: Source<Profile[]> = { availability: profileData.availability, data: profileData.data.profiles, ...(profileData.error && { error: profileData.error }) }
@@ -653,7 +653,7 @@ export async function collectTaskDetail(id: string, run: Run = systemRun): Promi
 // session active in the last few minutes is direct, attributable evidence of work.
 
 export const ACTIVITY_WINDOW = '3m'
-const ACTIVITY_PROFILES = ['default', 'leadengineer'] as const
+const ACTIVITY_PROFILES = ['default', 'lead-engineer', 'lab-assistant', 'personal-assistant'] as const
 const LOG_RECORD = /^(\d{4}-\d{2}-\d{2}[ T][\d:,.]+)\s+[A-Z]+(?:\s+\[[^\]]*\])?\s+([\w.]+):\s?(.*)$/
 const CHAT_MESSAGE = /\b(message|reply|replied|respond|inbound|outbound|received|sending|sent|chat)\b/i
 const ACTIVITY_LABELS: Record<ActivityKind, string> = {
@@ -712,7 +712,9 @@ export async function collectAgentActivity(run: Run = systemRun): Promise<AgentA
 
 const officeMetadata = [
   { name: 'Lead Agent', role: 'Lead Agent', avatar: 'lead-agent', workstation: 'Command desk', profile: 'default', aliases: ['default', 'lead agent', 'lead-agent', 'leadagent'] },
-  { name: 'Lead Engineer', role: 'Lead Engineer', avatar: 'lead-engineer', workstation: 'Engineering desk', profile: 'leadengineer', aliases: ['leadengineer', 'lead engineer', 'lead-engineer'] },
+  { name: 'Lead Engineer', role: 'Lead Engineer', avatar: 'lead-engineer', workstation: 'Engineering desk', profile: 'lead-engineer', aliases: ['lead-engineer', 'leadengineer', 'lead engineer'] },
+  { name: 'Lab Assistant', role: 'Lab Assistant', avatar: 'lab-assistant', workstation: 'Laboratory desk', profile: 'lab-assistant', aliases: ['lab-assistant', 'labassistant', 'lab assistant'] },
+  { name: 'Personal Asst', role: 'Personal Asst', avatar: 'personal-assistant', workstation: 'Admin desk', profile: 'personal-assistant', aliases: ['personal-assistant', 'personalassistant', 'personal assistant'] },
   { name: 'OpenCode', role: 'OpenCode', avatar: 'opencode', workstation: 'Build terminal', profile: undefined, aliases: ['opencode', 'open-code'] },
 ] as const
 

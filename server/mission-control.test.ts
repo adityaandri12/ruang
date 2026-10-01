@@ -41,7 +41,7 @@ describe('Hermes output parsers', () => {
   it('treats unrecognized profile output as unavailable', async () => {
     const snapshot = await collectSnapshot(async (_file, args) => {
       if (args.join(' ') === 'profile list') return 'Hermes profile service is starting.'
-      if (args.join(' ') === '-p leadengineer gateway status') return 'running'
+      if (args.join(' ') === '-p lead-engineer gateway status') return 'running'
       return '1.0.0'
     })
 
@@ -53,8 +53,8 @@ describe('Hermes output parsers', () => {
     const calls: string[][] = []
     const snapshot = await collectSnapshot(async (file, args) => {
       calls.push([file, ...args])
-      if (args.join(' ') === 'profile list') return ' Profile    Model       Gateway\n ───────\n ◆default  gpt-5.6    running\n  leadengineer  gpt-5.5  stopped\n'
-      if (args.join(' ') === '-p leadengineer gateway status') return 'running'
+      if (args.join(' ') === 'profile list') return ' Profile    Model       Gateway\n ───────\n ◆default  gpt-5.6    running\n  lead-engineer  gpt-5.5  stopped\n'
+      if (args.join(' ') === '-p lead-engineer gateway status') return 'running'
       return '1.0.0'
     })
 

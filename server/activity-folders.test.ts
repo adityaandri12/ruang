@@ -33,13 +33,13 @@ describe('live agent activity', () => {
     const calls: string[] = []
     const snapshot = await collectAgentActivity(async (_file, args) => {
       calls.push(args.join(' '))
-      if (args.includes('logs') && args[1] === 'leadengineer') throw new CommandError('Command exited with code 1.', 'COMMAND_FAILED', 'Log file not found: x')
+      if (args.includes('logs') && (args[1] === 'lead-engineer' || args[1] === 'leadengineer')) throw new CommandError('Command exited with code 1.', 'COMMAND_FAILED', 'Log file not found: x')
       if (args.includes('logs')) return '2026-09-27 12:00:01,000 INFO run_agent: turn started\n'
       return 'No sessions found.\n'
     })
     expect(calls).toContain('-p default logs agent -n 80 --since 3m')
-    expect(calls).toContain('-p leadengineer sessions list --limit 3')
-    expect(snapshot.agents).toMatchObject([{ profile: 'default', availability: 'available', active: true, kind: 'thinking' }, { profile: 'leadengineer', availability: 'available', active: false }])
+    expect(calls).toContain('-p lead-engineer sessions list --limit 3')
+    expect(snapshot.agents).toMatchObject([{ profile: 'default', availability: 'available', active: true, kind: 'thinking' }, { profile: 'lead-engineer', availability: 'available', active: false }])
   })
 })
 
@@ -49,7 +49,7 @@ describe('office placement from live activity', () => {
   it('moves a chatting or scheduled agent out of the Lounge into the Workspace', () => {
     const office = buildOfficeSnapshot(runtime, emptyBoard, emptyActivity, { now: at, agentActivity: live([
       { profile: 'default', availability: 'available', active: true, kind: 'chat', label: 'Replying to a chat', mentionsOpenCode: false },
-      { profile: 'leadengineer', availability: 'available', active: true, kind: 'cron', label: 'Running a scheduled job', mentionsOpenCode: true },
+      { profile: 'lead-engineer', availability: 'available', active: true, kind: 'cron', label: 'Running a scheduled job', mentionsOpenCode: true },
     ]) })
     expect(office.stations).toMatchObject([
       { name: 'Lead Agent', state: 'Collaborating', room: 'Workspace', roomPosition: 'meeting-area', activity: 'Replying to a chat', seat: 1 },
@@ -60,15 +60,15 @@ describe('office placement from live activity', () => {
   })
 
   it('keeps quiet agents in the Lounge and shows live work even when the gateway is stopped', () => {
-    const quietOffice = buildOfficeSnapshot(runtime, emptyBoard, emptyActivity, { now: at, agentActivity: live([quiet('default'), quiet('leadengineer')]) })
+    const quietOffice = buildOfficeSnapshot(runtime, emptyBoard, emptyActivity, { now: at, agentActivity: live([quiet('default'), quiet('lead-engineer')]) })
     expect(quietOffice.stations.map((station) => [station.state, station.room, station.activity])).toEqual([['Idle', 'Lounge', 'On a break'], ['Idle', 'Lounge', 'On a break'], ['Idle', 'Lounge', 'On a break']])
-    const stopped = buildOfficeSnapshot({ ...runtime, gateways: { ...runtime.gateways, leadEngineer: { availability: 'available', data: 'Stopped' } } }, emptyBoard, emptyActivity, { now: at, agentActivity: live([quiet('default'), { profile: 'leadengineer', availability: 'available', active: true, kind: 'tools', label: 'Using tools', mentionsOpenCode: false }]) })
+    const stopped = buildOfficeSnapshot({ ...runtime, gateways: { ...runtime.gateways, leadEngineer: { availability: 'available', data: 'Stopped' } } }, emptyBoard, emptyActivity, { now: at, agentActivity: live([quiet('default'), { profile: 'lead-engineer', availability: 'available', active: true, kind: 'tools', label: 'Using tools', mentionsOpenCode: false }]) })
     expect(stopped.stations[1]).toMatchObject({ state: 'Working', room: 'Workspace', activity: 'Using tools' })
   })
 
   it('labels running Kanban work with the task and never idles on an unavailable probe', () => {
     const board = { tasks: { availability: 'available' as const, data: [{ title: 'Ship v2', status: 'running', assignee: 'default' }] }, fetchedAt: at }
-    const office = buildOfficeSnapshot(runtime, board, emptyActivity, { now: at, agentActivity: live([quiet('default'), { profile: 'leadengineer', availability: 'unavailable', active: false, mentionsOpenCode: false }]) })
+    const office = buildOfficeSnapshot(runtime, board, emptyActivity, { now: at, agentActivity: live([quiet('default'), { profile: 'lead-engineer', availability: 'unavailable', active: false, mentionsOpenCode: false }]) })
     expect(office.stations[0]).toMatchObject({ state: 'Working', activity: 'Kanban: Ship v2' })
     expect(office.stations[1].state).toBe('Unknown')
     expect(office.stations[2].state).toBe('Unknown')

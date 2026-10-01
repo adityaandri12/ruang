@@ -193,6 +193,8 @@
 .pixel-character { --hair: #24394b; --skin: #e9b57d; --shirt: #6bd4c0; --pants: #263b55; display: inline-block; height: 58px; position: relative; width: 52px; z-index: 2; }
 .pixel-character.lead-agent { --hair: #b54b45; --shirt: #e6b34e; --pants: #36475d; }
 .pixel-character.lead-engineer { --hair: #1d293c; --shirt: #70bdcb; --pants: #374052; }
+.pixel-character.lab-assistant { --hair: #2d5a27; --shirt: #4caf50; --pants: #2e4037; }
+.pixel-character.personal-assistant { --hair: #4a3d2e; --shirt: #ff9800; --pants: #5d4e37; }
 .pixel-character.opencode { --hair: #6a4d8d; --shirt: #93ca67; --pants: #344349; }
 .character-head, .character-hair, .character-torso, .character-arm, .character-leg { image-rendering: pixelated; position: absolute; }
 .character-head { background: var(--skin); box-shadow: inset 4px 0 #d79666; height: 20px; left: 15px; top: 9px; width: 22px; }
@@ -209,8 +211,8 @@
 .detail-avatar { align-items: flex-end; background: #1a2823; border: 2px solid #527065; border-radius: 0; display: flex; height: 70px; justify-content: center; width: 70px; }
 .detail-avatar .pixel-character { transform: scale(1.1); transform-origin: bottom center; }
 .lounge .pixel-station { min-height: 96px; }.lounge .pixel-desk { display: none; }
-.lounge .lounge-seat-1 { bottom: 29%; left: 37%; right: auto; }.lounge .lounge-seat-2 { bottom: 33%; left: 10%; right: auto; }.lounge .lounge-seat-3 { bottom: 33%; left: auto; right: 9%; }
-.workspace .pixel-station-1 { bottom: 24%; left: 17%; }.workspace .pixel-station-2 { bottom: 20%; right: 14%; }.workspace .pixel-station-3 { bottom: 8%; left: 35%; }
+.lounge .lounge-seat-1 { bottom: 29%; left: 37%; right: auto; }.lounge .lounge-seat-2 { bottom: 33%; left: 10%; right: auto; }.lounge .lounge-seat-3 { bottom: 33%; left: auto; right: 9%; }.lounge .lounge-seat-4 { bottom: 15%; left: 25%; right: auto; }.lounge .lounge-seat-5 { bottom: 15%; left: auto; right: 25%; }
+.workspace .pixel-station-1 { bottom: 24%; left: 17%; }.workspace .pixel-station-2 { bottom: 20%; right: 14%; }.workspace .pixel-station-3 { bottom: 8%; left: 35%; }.workspace .pixel-station-4 { bottom: 12%; left: 55%; }.workspace .pixel-station-5 { bottom: 18%; left: 75%; }
 @media (max-width: 700px) { .lounge .lounge-seat-1 { bottom: 29%; left: 34%; }.lounge .lounge-seat-2 { left: 2%; }.lounge .lounge-seat-3 { right: 1%; }.pixel-station { transform: scale(.88); transform-origin: bottom center; } }
 
 /* System stacks keep the UI readable when it is fully offline. */

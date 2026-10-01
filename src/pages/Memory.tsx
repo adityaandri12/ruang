@@ -5,7 +5,7 @@ import type { AgentMemory, MemoryDocument, MemorySnapshot, MemoryStore } from '.
 import { EmptyState, LoadingState, PageTitle, SearchInput, SourceStatus, Unavailable } from '../ui.tsx'
 import { PixelCharacter } from './Office.tsx'
 
-const AVATARS: Record<string, string> = { default: 'lead-agent', leadengineer: 'lead-engineer', opencode: 'opencode' }
+const AVATARS: Record<string, string> = { default: 'lead-agent', 'lead-engineer': 'lead-engineer', leadengineer: 'lead-engineer', 'lab-assistant': 'lab-assistant', 'personal-assistant': 'personal-assistant', opencode: 'opencode' }
 
 function DocumentBody({ document, empty }: { document?: MemoryDocument; empty: string }) {
   if (!document || !document.exists) return <p className="muted">{empty}</p>

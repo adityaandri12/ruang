@@ -6,7 +6,7 @@ import type { FolderAgent, FolderAgentsSnapshot, FolderFile, FolderListing } fro
 import { EmptyState, LoadingState, PageTitle, SearchInput, SourceStatus, Unavailable } from '../ui.tsx'
 import { PixelCharacter } from './Office.tsx'
 
-const AVATARS: Record<string, string> = { default: 'lead-agent', leadengineer: 'lead-engineer', opencode: 'opencode' }
+const AVATARS: Record<string, string> = { default: 'lead-agent', 'lead-engineer': 'lead-engineer', leadengineer: 'lead-engineer', 'lab-assistant': 'lab-assistant', 'personal-assistant': 'personal-assistant', opencode: 'opencode' }
 
 function folderUrl(agent: string, kind: 'list' | 'file', path: string): string {
   return `/api/folders/${encodeURIComponent(agent)}/${kind}?path=${encodeURIComponent(path)}`
