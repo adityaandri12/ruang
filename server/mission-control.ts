@@ -450,9 +450,29 @@ function describeFailure(error: unknown): CommandError {
   return new CommandError('Read command was unavailable.', 'COMMAND_FAILED', stdout)
 }
 
+// Concurrency guard: a 2-vCPU host cannot sustain many heavy `hermes` CLI
+// bootstraps at once — parallel launches fight for CPU, every command slows to
+// the 25s timeout and the whole snapshot request fails. At most MAX_CONCURRENT
+// CLI children run simultaneously; the rest queue.
+const MAX_CONCURRENT_CLI = 3
+let runningCli = 0
+const cliQueue: (() => void)[] = []
+
+async function acquireCliSlot(): Promise<void> {
+  if (runningCli < MAX_CONCURRENT_CLI) { runningCli += 1; return }
+  await new Promise<void>((resolve) => cliQueue.push(resolve))
+}
+
+function releaseCliSlot(): void {
+  const next = cliQueue.shift()
+  if (next) next()
+  else runningCli -= 1
+}
+
 async function systemRun(file: string, args: string[], options: RunOptions = {}): Promise<string> {
-  const started = Date.now()
   const command = [file, ...args].join(' ')
+  await acquireCliSlot()
+  const started = Date.now()
   try {
     const { stdout } = await execFile(file, args, {
       timeout: COMMAND_TIMEOUT_MS,
@@ -466,6 +486,8 @@ async function systemRun(file: string, args: string[], options: RunOptions = {})
     const benign = options.benign?.test(failure.stdout) ?? false
     recordCommand({ command, ok: benign, durationMs: Date.now() - started, at: new Date(started).toISOString(), ...(benign ? {} : { error: failure.message }) })
     throw failure
+  } finally {
+    releaseCliSlot()
   }
 }
 
@@ -1029,13 +1051,16 @@ export async function getTaskDetail(id: string, now = Date.now(), board?: string
   return collectTaskDetail(id, systemRun, board)
 }
 
-export async function getOffice(now = Date.now()): Promise<OfficeSnapshot> {
+const officeSource = cachedSource(async (now = Date.now()) => {
   const [runtime, board, activity, agentActivity] = await Promise.all([getSnapshot(now), getTaskBoard(now), getActivity(now), agentActivitySource(now)])
   return buildOfficeSnapshot(runtime, board, activity, { agentActivity })
-}
+})
 
-export async function getDashboard(now = Date.now()): Promise<DashboardSnapshot> {
+const dashboardSource = cachedSource(async (now = Date.now()) => {
   const [runtime, board, calendar, activity, knowledge, channels, agentActivity] = await Promise.all([getSnapshot(now), getTaskBoard(now), getCalendar(now), getActivity(now), getKnowledge(now), getChannels(now), agentActivitySource(now)])
   const office = buildOfficeSnapshot(runtime, board, activity, { agentActivity })
   return buildDashboard({ runtime, board, calendar, activity, knowledge, channels, office, commands: commandHealth() })
-}
+})
+
+export function getOffice(now = Date.now()): Promise<OfficeSnapshot> { return officeSource(now) }
+export function getDashboard(now = Date.now()): Promise<DashboardSnapshot> { return dashboardSource(now) }
