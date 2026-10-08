@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
+import { Component, lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type ErrorInfo, type KeyboardEvent, type ReactNode } from 'react'
 import { agentLook } from '../agents.ts'
 import { officeStateBadge } from '../office-state.ts'
 import { usePolling } from '../polling.ts'
@@ -14,19 +14,11 @@ import { TaskBoard } from './TaskBoard.tsx'
 import { formatCost } from '../usage.ts'
 import { RelockBar } from '../ProfileLock.tsx'
 import { TokenUsage } from './TokenUsage.tsx'
+import { resetWebGLCache, sceneErrorKind, webglAvailable } from '../webgl.ts'
 
 // The 3D view (three.js) is only downloaded when someone switches to it.
 const Office3D = lazy(() => import('./Office3D.tsx'))
 type OfficeView = '2d' | '3d'
-
-function webglAvailable(): boolean {
-  try {
-    const canvas = document.createElement('canvas')
-    return Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'))
-  } catch {
-    return false
-  }
-}
 
 /** 3D unless the viewer chose 2D before (or the browser has no WebGL, handled by the caller). */
 function storedView(): OfficeView {
@@ -43,10 +35,26 @@ function storedPanel(): PanelTab | undefined {
   } catch { return undefined }
 }
 
-class SceneBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+/** Catches a 3D scene that throws (WebGL context creation, shaders, a failed chunk load). */
+class SceneBoundary extends Component<{ fallback: ReactNode; onError?: () => void; children: ReactNode }, { failed: boolean }> {
   state = { failed: false }
   static getDerivedStateFromError() { return { failed: true } }
+  componentDidCatch(error: unknown, info: ErrorInfo) {
+    console.error(`[ruang] 3D office failed (${sceneErrorKind(error)}), falling back to 2D:`, error, info.componentStack)
+    this.props.onError?.()
+  }
   render() { return this.state.failed ? this.props.fallback : this.props.children }
+}
+
+/** Says why the 3D office is not showing; the 2D office renders below it. */
+export function Office3DFallback({ reason, onRetry }: { reason: 'no-webgl' | 'failed'; onRetry?: () => void }) {
+  return <section className="office-3d-fallback" role="status">
+    <strong>{reason === 'no-webgl' ? '3D view unavailable: WebGL is not supported' : '3D view stopped'}</strong>
+    <span>{reason === 'no-webgl'
+      ? 'This browser or device does not provide WebGL (it may be turned off or hardware acceleration disabled). Showing the 2D office instead.'
+      : 'The 3D office could not keep running on this device (the graphics context failed or was lost). Showing the 2D office instead.'}</span>
+    {onRetry && <button type="button" className="refresh-button" onClick={onRetry}>Try 3D again</button>}
+  </section>
 }
 
 const ROOMS: OfficeRoom[] = ['Workspace', 'Lounge']
@@ -162,7 +170,17 @@ export function Office({ dashboard, dashboardPending = false, onNavigate }: { da
   const selectedTrigger = useRef<HTMLElement | null>(null)
   const [chosenRoom, setChosenRoom] = useState<OfficeRoom | undefined>()
   const [view, setView] = useState<OfficeView>(() => typeof window === 'undefined' ? '2d' : storedView())
-  const [webgl] = useState(() => typeof document === 'undefined' || webglAvailable())
+  const [webgl, setWebgl] = useState(() => typeof document === 'undefined' || webglAvailable())
+  // Set when the 3D scene failed at runtime (threw, or lost its WebGL context for good).
+  const [sceneFailed, setSceneFailed] = useState(false)
+  const [sceneAttempt, setSceneAttempt] = useState(0)
+  const retry3d = () => {
+    resetWebGLCache()
+    setWebgl(webglAvailable())
+    setSceneFailed(false)
+    setSceneAttempt((value) => value + 1)
+  }
+  const fail3d = () => setSceneFailed(true)
   const [panel, setPanel] = useState<PanelTab | undefined>(() => typeof window === 'undefined' ? undefined : storedPanel())
   const [overlay, setOverlay] = useState<OverlayKind | undefined>()
   const choosePanel = (next: PanelTab | undefined) => {
@@ -173,7 +191,7 @@ export function Office({ dashboard, dashboardPending = false, onNavigate }: { da
     setView(next)
     try { window.localStorage.setItem('mc.officeView', next) } catch { /* storage may be blocked */ }
   }
-  const show3d = view === '3d' && webgl
+  const show3d = view === '3d' && webgl && !sceneFailed
   const select3d = (station: OfficeStation, trigger: HTMLElement | null) => { selectedTrigger.current = trigger; setSelectedName(station.name) }
   const counts = Object.fromEntries(ROOMS.map((item) => [item, office?.stations.filter((station) => station.room === item).length ?? 0])) as Record<OfficeRoom, number>
   // Until the viewer picks a room, open wherever the crew currently is.
@@ -200,7 +218,7 @@ export function Office({ dashboard, dashboardPending = false, onNavigate }: { da
       <button type="button" className={`panel-toggle${panel ? ' active' : ''}`} aria-expanded={Boolean(panel)} aria-controls="office-panel" onClick={() => choosePanel(panel ? undefined : 'Crew')}>◧ Panel</button>
     </div>
     <div className="office-canvas">
-      {show3d ? <SceneBoundary fallback={<section className="empty-state"><h2>3D view unavailable</h2><p>The 3D office could not start on this device. Switch back to 2D.</p></section>}><Suspense fallback={<LoadingState message="Loading the 3D office..."/>}><Office3D stations={office?.stations ?? []} onSelect={select3d}/></Suspense></SceneBoundary> : <>{view === '3d' && !webgl && <p className="muted office-note">3D needs WebGL, which this browser does not provide. Showing 2D.</p>}<div className="room-tabs" role="tablist" aria-label="Office rooms">{ROOMS.map((item) => <button role="tab" aria-selected={room === item} className={room === item ? 'active' : ''} onClick={() => setChosenRoom(item)} key={item}>{item} <span className="room-count">{counts[item]}</span></button>)}</div>
+      {show3d ? <SceneBoundary key={sceneAttempt} onError={fail3d} fallback={null}><Suspense fallback={<LoadingState message="Loading the 3D office..."/>}><Office3D stations={office?.stations ?? []} onSelect={select3d} onContextLost={fail3d}/></Suspense></SceneBoundary> : <>{view === '3d' && <Office3DFallback reason={webgl ? 'failed' : 'no-webgl'} onRetry={retry3d}/>}<div className="room-tabs" role="tablist" aria-label="Office rooms">{ROOMS.map((item) => <button role="tab" aria-selected={room === item} className={room === item ? 'active' : ''} onClick={() => setChosenRoom(item)} key={item}>{item} <span className="room-count">{counts[item]}</span></button>)}</div>
         <div className="room-scroll"><section className={`pixel-room flow ${room.toLowerCase()}`} aria-label={`${room} room`}><div className="room-label"><span>{room}</span><small>{room === 'Workspace' ? `${deskCount} HOT DESK${deskCount === 1 ? '' : 'S'} + MEETING TABLE` : 'QUIET BREAK AREA'}</small></div>
           {room === 'Workspace' ? <>
             <div className="flow-desks">{Array.from({ length: deskCount }, (_, index) => {

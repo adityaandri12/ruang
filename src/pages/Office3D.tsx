@@ -294,7 +294,41 @@ function useFloor(): [Floor, (floor: Floor) => void] {
   }]
 }
 
-export default function Office3D({ stations, onSelect }: { stations: OfficeStation[]; onSelect: (station: OfficeStation, trigger: HTMLElement | null) => void }) {
+/** How long a lost WebGL context may take to come back before the view gives up on 3D. */
+export const CONTEXT_RESTORE_MS = 3000
+
+/**
+ * Watches the canvas for a lost WebGL context (GPU reset, driver crash, too many contexts on
+ * the page). The browser often restores it on its own; only if it stays lost is the 3D view
+ * reported as failed, so the page can fall back to 2D instead of showing a frozen canvas.
+ */
+function ContextWatcher({ onContextLost }: { onContextLost?: () => void }) {
+  const { gl } = useThree()
+  useEffect(() => {
+    const canvas = gl.domElement
+    let timer: number | undefined
+    const lost = (event: Event) => {
+      event.preventDefault() // allows the browser to restore the context
+      console.warn(`[ruang] 3D office lost its WebGL context${(event as WebGLContextEvent).statusMessage ? `: ${(event as WebGLContextEvent).statusMessage}` : ''}; waiting ${CONTEXT_RESTORE_MS} ms for it to come back`)
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        console.error('[ruang] 3D office WebGL context was not restored, falling back to 2D')
+        onContextLost?.()
+      }, CONTEXT_RESTORE_MS)
+    }
+    const restored = () => { console.info('[ruang] 3D office WebGL context restored'); window.clearTimeout(timer); timer = undefined }
+    canvas.addEventListener('webglcontextlost', lost)
+    canvas.addEventListener('webglcontextrestored', restored)
+    return () => {
+      window.clearTimeout(timer)
+      canvas.removeEventListener('webglcontextlost', lost)
+      canvas.removeEventListener('webglcontextrestored', restored)
+    }
+  }, [gl, onContextLost])
+  return null
+}
+
+export default function Office3D({ stations, onSelect, onContextLost }: { stations: OfficeStation[]; onSelect: (station: OfficeStation, trigger: HTMLElement | null) => void; onContextLost?: () => void }) {
   const anchors = useRef(new Map<string, THREE.Object3D>())
   const labels = useRef(new Map<string, HTMLElement>())
   const view = useRef<ViewHandle>(null)
@@ -320,7 +354,8 @@ export default function Office3D({ stations, onSelect }: { stations: OfficeStati
   return <div className="office-3d" ref={setKeyTarget} tabIndex={0} role="region" aria-label="3D office. Drag to rotate, right-drag or two fingers to pan, scroll to zoom, arrow keys pan when focused. Page Up and Page Down change floors." onKeyDown={(event) => {
     if (event.key === 'PageUp' || event.key === 'PageDown') { event.preventDefault(); setFloor(event.key === 'PageUp' ? 2 : 1) }
   }}>
-    <Canvas shadows dpr={[1, 2]} camera={{ position: [-3, 13, 16], fov: 40, near: 0.5, far: 150 }} gl={{ antialias: true }}>
+    <Canvas shadows dpr={[1, 2]} camera={{ position: [-3, 13, 16], fov: 40, near: 0.5, far: 150 }} gl={{ antialias: true }} fallback={<p className="office-3d-fallback" role="status">3D view unavailable: this browser could not create a WebGL canvas.</p>}>
+      <ContextWatcher onContextLost={onContextLost}/>
       <Lighting theme={theme}/>
       <Environment night={theme === 'dark'} layout={layout} floor={floor}/>
       {floor === 1 && layout.desks.map((position, index) => <WorkDesk key={index} position={position} active={occupiedSeats.has(index + 1)} withChair/>)}

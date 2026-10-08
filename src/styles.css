@@ -538,6 +538,9 @@ aside.drawer[hidden] { display: none; }
 .office-3d-hint { background: color-mix(in srgb, var(--surface) 80%, transparent); border-radius: 4px; bottom: 12px; left: 12px; padding: 5px 9px; pointer-events: none; position: absolute; z-index: 3; }
 .office-failed { left: 16px; position: absolute; right: 16px; top: 70px; z-index: 3; }
 .office-note { margin: 0 0 10px; }
+.office-3d-fallback { align-items: center; background: var(--surface-2); border: 1px solid var(--border-strong); border-left: 3px solid var(--accent); border-radius: 4px; color: var(--text-muted); display: flex; flex-wrap: wrap; font-size: 13px; gap: 6px 12px; margin: 0 0 12px; padding: 10px 12px; }
+.office-3d-fallback strong { color: var(--text); font-weight: 500; }
+.office-3d-fallback span { flex: 1 1 260px; }
 
 .office-hud { display: flex; flex-wrap: wrap; gap: 6px; left: 12px; position: absolute; right: 190px; top: 12px; z-index: 4; }
 .hud-chip { align-items: baseline; backdrop-filter: blur(6px); background: color-mix(in srgb, var(--surface) 82%, transparent); border: 1px solid var(--border-strong); border-radius: 6px; color: var(--text); display: inline-flex; font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; gap: 7px; padding: 6px 10px; white-space: nowrap; }

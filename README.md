@@ -52,6 +52,8 @@ npm start          # open http://127.0.0.1:3001
 
 Checks: `npm run lint`, `npm test`, `npm run build`.
 
+`npm install` installs the dev dependencies the build and tests need: `react`, `react-dom`, `three`, `@react-three/fiber`, their `@types/*`, `vite`, `@vitejs/plugin-react`, `vitest` and `jsdom`. Do not install with `--omit=dev` or `NODE_ENV=production` in a checkout, or `tsc -b` cannot find them. Both tsconfigs load Node types (`"types": ["node", …]`).
+
 **After pulling new code** run `npm install && npm run build` and restart `npm start` (a running `npm start` keeps serving the old API; `npm run dev` restarts the API by itself). The UI checks `/api/health` and shows a *Restart needed* banner when the server is older than the page. Set `RUANG_PORT` (or pass `--port`) to change the port. The server binds to `127.0.0.1` only. The older `MISSION_CONTROL_*` settings still work.
 
 **Releasing:** bump the version and push the tag, for example `npm version 0.2.1 && git push origin main --follow-tags`. The *Release* workflow then lints, tests, builds and attaches `ruang.tgz` to a GitHub release, which the installer picks up. To also publish to npm, add an `NPM_TOKEN` repository secret.
@@ -61,7 +63,7 @@ Checks: `npm run lint`, `npm test`, `npm run build`.
 - **Agents**: every agent on this machine, with model, gateway state and what it is doing in the office. Agents are discovered, not configured: every Hermes profile from `hermes profile list` is an agent, plus OpenCode when it is installed. New profiles appear automatically, and each agent gets its own character colours derived from its name.
 - **Office** (home page): the office fills the screen below the header. A HUD across the top shows crew active, gateways running, running/open tasks, the next cron run and (when any) failed CLI reads; chips link to their page. The **Panel** button opens one side panel with three tabs: **Crew** (crew snapshot and a clickable list of stations), **Stats** (statistics across every source, token usage, the Kanban status breakdown, runtime and what is up next; tiles link to their pages) and **Activity** (unattributed session metadata and messaging channels). The **Tasks**, **Calendar** and **Tokens** buttons open the Task Board, a month calendar of cron runs or token usage over the office, without leaving it (Esc or ✕ closes them; *Open full page* goes to the page). `#/dashboard` opens the Office.
 
-  The view switches between **3D** (the default) and **2D**, remembered per browser; browsers without WebGL stay on 2D. The 3D view (three.js via React Three Fiber, loaded only when used) is an office of several rooms with an Indonesian touch:
+  The view switches between **3D** (the default) and **2D**, remembered per browser; browsers without WebGL stay on 2D (see *3D view and WebGL fallback* below). The 3D view (three.js via React Three Fiber, loaded only when used) is an office of several rooms with an Indonesian touch:
   - the workspace: hot desking, with one unlabeled desk per agent in two rows (the building widens for a larger crew), and a meeting table with gorengan (fried snacks) on it
   - a lounge behind a glass partition, where the sofa faces a TV on the back wall
   - a game room through a door from the lounge: ping-pong, two arcade machines, a console corner with beanbags, and a karambol (carrom) board
@@ -213,6 +215,20 @@ State placement is visualized without inventing work:
 The crew snapshot counts agents, active work (`Working`/`Reviewing`/`Collaborating`), managed idle and unknown separately. Gateway health (how many profiles report their gateway `Running`) is displayed as a separate metric. When a station has several Kanban tasks, the `running` one wins, then `review`, then the first open task.
 
 `/api/channels` is a separate safe snapshot sourced only from the Messaging Platforms section and active-session count of `hermes status --all`; it never exposes unconfigured platforms or any other status content. The Office introduces no write endpoint, shell input or command beyond the fixed allowlist.
+
+### 3D view and WebGL fallback
+
+WebGL support is detected once per page by `webglAvailable()` in `src/webgl.ts` and then cached, so every remount and route change gets the same answer:
+- It tries `webgl2`, then `webgl`, then `experimental-webgl` (older Safari, Edge and Android WebViews). A context id that throws, rather than returning `null`, counts as unsupported and the next id is tried.
+- A context that is already lost (GPU reset, blocklisted driver) counts as no WebGL.
+- The probe context is released straight away (`WEBGL_lose_context`). Browsers cap live WebGL contexts and silently drop the oldest one, so the probe can no longer cost the real 3D canvas its context. This was the cause of the intermittent blank or broken 3D view.
+
+When 3D cannot run, the Office explains why above the 2D office, which keeps working:
+- **No WebGL**: *3D view unavailable: WebGL is not supported*, and the 3D toggle is disabled.
+- **Runtime failure**: the scene threw (for example while creating its context, or loading the 3D chunk), or its WebGL context was lost and not restored within 3 seconds. You see *3D view stopped* with a **Try 3D again** button, which probes again and remounts the scene.
+- The React Three Fiber `Canvas` also has its own fallback text for browsers that cannot create the canvas.
+
+Tests: `src/webgl.test.ts` covers detection, ordering, throwing or lost contexts and caching. `src/office3d-render.test.tsx` renders `Office3D` with the canvas mocked, because jsdom has no WebGL, and checks both Office fallbacks and the retry.
 
 ## Live activity in the Office
 
