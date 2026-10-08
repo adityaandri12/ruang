@@ -25,7 +25,7 @@ const testEnvironment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRON
 testEnvironment.IS_REACT_ACT_ENVIRONMENT = true
 
 const station: OfficeStation = {
-  name: 'Lead Agent', role: 'Lead Agent', avatar: 'lead-agent', workstation: 'Command desk', room: 'Workspace', roomPosition: 'assigned-desk',
+  id: 'default', name: 'Lead Agent', role: 'Lead Agent', room: 'Workspace', roomPosition: 'assigned-desk',
   state: 'Working', currentTask: 'Ship it', recentActivity: 'None', activity: 'Kanban: Ship it', seat: 1, provenance: 'Test', freshness: 'Current',
 }
 const office: OfficeSnapshot = { stations: [station], summary: { declared: 1, active: 1, idle: 0, offline: 0, unknown: 0, gatewaysReachable: 1, gatewaysDeclared: 1 }, fetchedAt: '2026-10-01T00:00:00.000Z' }
@@ -53,16 +53,14 @@ afterEach(() => {
 })
 
 describe('Office3D', () => {
-  it('renders the canvas, an accessible label per agent and desk, and the view tools', async () => {
+  it('renders the canvas, an accessible label per agent, and the view tools', async () => {
     const onSelect = vi.fn()
     const host = await render(<Office3D stations={[station]} onSelect={onSelect}/>)
     expect(host.querySelector('[role="region"][aria-label^="3D office"]')).not.toBeNull()
     expect(host.querySelector('[data-testid="r3f-canvas"]')?.textContent).toContain('3D view unavailable')
     const tag = host.querySelector<HTMLButtonElement>('.agent-tag-3d')!
     expect(tag.getAttribute('aria-label')).toContain('Lead Agent. Working.')
-    expect(host.querySelectorAll('.desk-label-3d')).toHaveLength(5)
-    expect(host.querySelector('.desk-label-3d')?.textContent).toBe('Command desk')
-    expect([...host.querySelectorAll('.office-3d-tools button')].map((button) => button.textContent)).toEqual(['✥ Geser', '↺ Reset view'])
+    expect([...host.querySelectorAll('.office-3d-tools button')].map((button) => button.textContent)).toEqual(['💤 Tidur', '✥ Geser', '↺ Reset view'])
     await act(async () => { tag.click() })
     expect(onSelect).toHaveBeenCalledWith(station, tag)
   })
